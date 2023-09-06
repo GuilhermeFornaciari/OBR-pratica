@@ -15,7 +15,7 @@ motorDireito = Motor(
     Port.B, positive_direction=Direction.CLOCKWISE, gears=None)
 # inicia DriveBase
 robo = DriveBase(motorEsquerdo, motorDireito,
-                 wheel_diameter=37.1, axle_track=234)
+                 wheel_diameter=33, axle_track=208.5)
 # iniciando sensores de cor
 sensorCorEsquerda = ColorSensor(Port.S1)
 sensorCorDireita = ColorSensor(Port.S4)
@@ -24,8 +24,9 @@ sensorCorDireita = ColorSensor(Port.S4)
 ev3 = EV3Brick()
 
 
-ev3.speaker.beep()
-#robo.straight(1000)
-robo.turn(360)
+while (True):
+    x = sensorCorEsquerda.color()
+    y = sensorCorDireita.color()
 
-ev3.speaker.beep()
+    print("cor esquerda = " + x)
+    print("Cor direita = " + y)

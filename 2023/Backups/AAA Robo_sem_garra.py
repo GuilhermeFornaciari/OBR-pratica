@@ -13,21 +13,27 @@ motorDireito = Motor(
     Port.B, positive_direction=Direction.CLOCKWISE, gears=None)
 # inicia DriveBase
 robo = DriveBase(motorEsquerdo, motorDireito,
-                 wheel_diameter=37.3, axle_track=225)
+                 wheel_diameter=33, axle_track=208.5)
 # iniciando sensores de cor
 CorEsquerda = ColorSensor(Port.S1)
-CorDireita = ColorSensor(Port.S2)
+CorDireita = ColorSensor(Port.S4)
+ultrassonico = UltrasonicSensor(Port.S3)
+
 cores = []
+nverdes = 0
+apospreto = False
+
+
 def detectaverde():
     corE = []
     corD = []
     for _ in range(80):
-        robo.drive(30, 0)
+        robo.drive(20, 0)
         corE.append(CorEsquerda.color())
         corD.append(CorDireita.color())
         wait(1)
     for _ in range(100):
-        robo.drive(30, 0)
+        robo.drive(-20, 0)
         corE.append(CorEsquerda.color())
         corD.append(CorDireita.color())
         wait(1)
@@ -56,43 +62,92 @@ def detectaverde():
     return [maiorE, maiorD]
 
 
+def doisverdes():
+    robo.straight(-50)
+    while CorDireita.color() != Color.BLACK:
+        robo.drive(0, 60)
+    robo.turn(20)
+
+
 def verde90(lado, sensor1, sensor2):
     ev3.speaker.beep()
-    while sensor1.color() != Color.WHITE and sensor1.color() != Color.WHITE:
-        robo.drive(100, 0)
-    robo.straight(10)
+    while sensor1.color() != Color.WHITE:
+        robo.drive(110, 30 * lado)
     while sensor1.color() != Color.BLACK:
         robo.drive(20, 60 * lado)
-    robo.straight(20)
+    while sensor2.color() == Color.BLACK:
+        robo.drive(20, 60 * lado)
+    while sensor2.color() != Color.BLACK:
+        robo.drive(20, 60 * lado)
 
 
-def pretos(lado, sensor1, sensor2):
-    robo.straight(20)
-    while sensor1.color() != Color.WHITE:
+def doispretos(lado, sensor1, sensor2):
+    for i in range(10):
+        #Problema econtrado, dois pretos, erra e sai do segue linha
+        robo.drive(100, 0)
+        wait(1)
+    while sensor1.color() != Color.WHITE and sensor1.color() != Color.GREEN:
         robo.drive(20, 60 * -lado)
     while sensor2.color() != Color.BLACK:
         robo.drive(20, 60 * lado)
 
-def passotras():
-    for _ in range (100):
-        robo.drive(-80,0)
-        wait(1)
-        if CorEsquerda.color() != Color.WHITE or CorDireita.color() != Color.WHITE:
-            break
-        
+
+def obstaculo():
+    lado = 1
+
+    robo.stop()
+    ev3.speaker.beep()
+
+    wait(100)
+
+    distancia = ultrassonico.distance() - 20 #cm
+    robo.straight(distancia)
+    robo.turn(90 * lado)
+    robo.straight(180)
+    robo.turn(90 * -lado)
+    robo.straight(330)
+    robo.turn(90 * - lado)
+    robo.straight(80)
+    while CorEsquerda.color() != Color.BLACK or CorDireita.color() != Color.BLACK:
+        robo.drive(100, 0)
+    robo.straight(40)
+    robo.turn(90 * lado)
+
+
 while True:
     robo.drive(100, 0)
+
+    if ultrassonico.distance() < 40:
+        obstaculo()
+
     while CorEsquerda.color() == Color.BLACK:
-        
         robo.drive(20, -60)
         if CorDireita.color() == Color.BLACK:
-            pretos(-1, CorEsquerda, CorDireita)
+            doispretos(-1, CorEsquerda, CorDireita)
+            apospreto = True
 
     while CorDireita.color() == Color.BLACK:
         robo.drive(20, 60)
         if CorEsquerda.color() == Color.BLACK:
-            pretos(1, CorDireita, CorEsquerda)
-    if CorEsquerda.color() == Color.GREEN or CorDireita.color() == Color.GREEN:
+            doispretos(1, CorDireita, CorEsquerda)
+            apospreto = True
+
+    if CorEsquerda.color() == Color.WHITE and CorDireita.color() == Color.WHITE:
+        apospreto = False
+
+    if (CorEsquerda.color() == Color.GREEN or CorDireita.color() == Color.GREEN) and not apospreto:
         cores = detectaverde()
-    if Color.GREEN in cores:
-        ev3.speaker.beep()
+        nverdes = cores.count(Color.GREEN)
+
+        if nverdes == 1:
+            if cores[0] == Color.GREEN:
+                verde90(-1, CorEsquerda, CorDireita)
+            else:
+                verde90(1, CorDireita, CorEsquerda)
+        elif nverdes == 2:
+            doisverdes()
+        else:
+            robo.straight(-50)
+
+        cores = []
+        nverdes = 0

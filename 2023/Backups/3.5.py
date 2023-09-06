@@ -11,17 +11,18 @@ motorEsquerdo = Motor(
     Port.A, positive_direction=Direction.CLOCKWISE, gears=None)
 motorDireito = Motor(
     Port.B, positive_direction=Direction.CLOCKWISE, gears=None)
-# inicia DriveBase5
+# inicia DriveBase
 robo = DriveBase(motorEsquerdo, motorDireito,
-                 wheel_diameter=33, axle_track=208.5)
-# iniciando sensores d+e cor
-CorEsquerda = ColorSensor(Port.S1)
-CorDireita = ColorSensor(Port.S2)
+                 wheel_diameter=37.1, axle_track=234)
+# iniciando sensores de cor
+CorEsquerda = ColorSensor(Port.S4)
+CorDireita = ColorSensor(Port.S1)
 ultrassonico = UltrasonicSensor(Port.S3)
-CorFrente = ColorSensor(Port.S4)
+
 cores = []
 nverdes = 0
 apospreto = False
+
 
 def detectaverde():
     corE = []
@@ -60,16 +61,19 @@ def detectaverde():
 
     return [maiorE, maiorD]
 
+
 def doisverdes():
     robo.straight(-50)
     while CorDireita.color() != Color.BLACK:
         robo.drive(0, 60)
     robo.turn(20)
 
+
 def verde90(lado, sensor1, sensor2):
     ev3.speaker.beep()
-    while sensor1.color() != Color.WHITE:
+    for i in range(50):
         robo.drive(110, 30 * lado)
+        wait(10)
     while sensor1.color() != Color.BLACK:
         robo.drive(20, 60 * lado)
     while sensor2.color() == Color.BLACK:
@@ -77,13 +81,17 @@ def verde90(lado, sensor1, sensor2):
     while sensor2.color() != Color.BLACK:
         robo.drive(20, 60 * lado)
 
-def doispretos(lado, sensor1, sensor2):
 
-    while sensor1.color() != Color.WHITE and sensor1.color() != Color.GREEN:
+def doispretos(lado, sensor1, sensor2):
+    ev3.speaker.beep()
+    for i in range(30):
+        robo.drive(100, 0)
+        wait(1)
+    while sensor1.color() != Color.WHITE:
         robo.drive(20, 60 * -lado)
-    robo.straight(30)
     while sensor2.color() != Color.BLACK:
         robo.drive(20, 60 * lado)
+
 
 def obstaculo():
     lado = 1
@@ -93,12 +101,12 @@ def obstaculo():
 
     wait(100)
 
-    distancia = ultrassonico.distance() - 40
+    distancia = ultrassonico.distance() - 20
     robo.straight(distancia)
     robo.turn(90 * lado)
     robo.straight(180)
     robo.turn(90 * -lado)
-    robo.straight(330)
+    robo.straight(380)
     robo.turn(90 * - lado)
     robo.straight(80)
     while CorEsquerda.color() != Color.BLACK or CorDireita.color() != Color.BLACK:
@@ -106,25 +114,24 @@ def obstaculo():
     robo.straight(40)
     robo.turn(90 * lado)
 
+
 while True:
-    robo.drive(100, 0)    
+    robo.drive(110, 0)
+
     if ultrassonico.distance() < 40:
         obstaculo()
 
-
     while CorEsquerda.color() == Color.BLACK:
-        robo.drive(15, -45)
+        robo.drive(20, -60)
         if CorDireita.color() == Color.BLACK:
             doispretos(-1, CorEsquerda, CorDireita)
             apospreto = True
 
-
     while CorDireita.color() == Color.BLACK:
-        robo.drive(15, 45)
+        robo.drive(20, 60)
         if CorEsquerda.color() == Color.BLACK:
             doispretos(1, CorDireita, CorEsquerda)
             apospreto = True
-            
 
     if CorEsquerda.color() == Color.WHITE and CorDireita.color() == Color.WHITE:
         apospreto = False
@@ -133,16 +140,13 @@ while True:
         cores = detectaverde()
         nverdes = cores.count(Color.GREEN)
 
-        if nverdes == 1:
-            if cores[0] == Color.GREEN:
-                verde90(-1, CorEsquerda, CorDireita)
-            else:
-                verde90(1, CorDireita, CorEsquerda)
-        elif nverdes == 2:
-            doisverdes()
+    if nverdes == 1:
+        if cores[0] == Color.GREEN:
+           verde90(-1, CorEsquerda, CorDireita)
         else:
-            robo.straight(-20)
-            robo.turn(10)
+            verde90(1, CorDireita, CorEsquerda)
+    elif nverdes == 2:
+        doisverdes()
 
-        cores = []
-        nverdes = 0
+    cores = []
+    nverdes = 0
