@@ -1,0 +1,726 @@
+#!/usr/bin/env pybricks-micropython
+from pybricks.hubs import EV3Brick
+from pybricks.ev3devices import (Motor, TouchSensor, ColorSensor,
+                                InfraredSensor, UltrasonicSensor, GyroSensor)
+from pybricks.parameters import Port, Stop, Direction, Button, Color
+from pybricks.tools import wait, StopWatch, DataLog
+from pybricks.robotics import DriveBase
+from pybricks.media.ev3dev import SoundFile, ImageFile
+
+#inicando motores
+motorEsquerdo = Motor(Port.A,positive_direction=Direction.COUNTERCLOCKWISE , gears=None)
+motorDireito = Motor(Port.B,positive_direction=Direction.COUNTERCLOCKWISE , gears=None)
+garra = Motor(Port.D,positive_direction=Direction.COUNTERCLOCKWISE , gears=None)
+caixa = Motor(Port.C,positive_direction=Direction.COUNTERCLOCKWISE , gears=None)
+#inicia DriveBase
+robo = DriveBase(motorEsquerdo, motorDireito, wheel_diameter=40.7, axle_track=196)
+#iniciando sensores de cor
+sensorCorEsquerda = ColorSensor(Port.S1)
+sensorCorDireita = ColorSensor(Port.S2)
+#listas
+listaCorEsquerda = []
+listaCorDireita = []
+#var
+resultEsquerda = None
+resultDireita = None
+#ev3
+ev3 = EV3Brick()
+#trava verde
+travaVerde = False #<- trava de curva verde
+#sensor ultrasonico e de toque
+ultraSonico = UltrasonicSensor(Port.S3)
+sensortoque = TouchSensor(Port.S4)
+#tste de curva no dois preto
+testeDoisPretoCurva = None
+
+garra.reset_angle(0)
+caixa.reset_angle(0)
+garra.hold()
+
+
+#------------------------------------------------------------------------------
+# 1=baixo | 2=cima
+parou = 0
+def saida():
+
+
+def soltarBolinhas(): #<- fazer a função para a caixa soltar as bolinhahs de vagar e  puxar a função de saida
+                     #para ele sair da área de resgate
+   print('soltar')
+  
+   #algoritimo
+  
+   saida()
+
+# ----Variáveis----
+retentativaBotao = 100
+tamanhoRobo = 150 #largura
+valorFrente = 0
+valorFrentePercurso = 0
+valorLado = 0
+ladoEntrada = None # 1:esquerda   | 2:direita
+saidaPossivel = ''
+valorAndarLado = 0
+#------------------
+
+#----Ler os lados----
+robo.stop()
+
+valorFrente = ultraSonico.distance() # Ler medida da frente (Por Volta de 720)
+
+robo.turn(90) # virar para direita
+robo.straight(-50)
+
+valorLado = ultraSonico.distance() # Ler medida Lateral (Por Voltade de 720)
+valorAndarLado = valorLado
+#-------------------
+
+#--Teste para ver o lado de entrada--
+
+if valorLado > 200: # lado de entrada esquerda
+   ladoEntrada = 1
+elif valorLado < 200: # lado de entrada direito
+   ladoEntrada = 2
+#------------------------------------
+
+#-----Teste para verificar possivél saída no inicio--
+#Este teste verifica se tem uma possivél saída logo em frente á entrada
+if valorFrente > 735:
+   print('Possivél Saída Logo a Frente')
+   saidaPossivel = 'frente'
+if valorLado > 735:
+   print('Possivél Saída Logo ao lado')
+   saidaPossivel = 'lado'
+#------------------------------------------
+
+#---ALGOTIMO---
+#---SE ladoEntrada==1 (lado de entrada esquerdo)---
+if ladoEntrada==1:
+  
+   #alinha á esquerda para ir rente a parede
+   while ultraSonico.distance() < 600:
+       robo.drive(0,-25) # Virar para esquerda
+      
+   #Baixa a garra   
+   garra.run_until_stalled(-200, Stop.HOLD, 50) # abaixar a garra
+  
+   #Até que o botão seja pressionado ele seguira em frente
+   while sensortoque.pressed() != True: #
+       robo.drive(100,0)
+   #Quando o botão for pressionado, faz a função de levantar a garra
+   limitador = 0 #variavél limitadora
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+  
+   #vira 90* para direita e se ajusta na parede
+   robo.turn(90)
+   robo.straight(tamanhoRobo) # anda o tamanho do robo
+   valorAndarLado -= tamanhoRobo
+  
+   #vira em direção a parede da frente
+   robo.turn(90)
+   valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+  
+   #baixa a garra
+   garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+  
+   #anda na seguna fase da varedura
+   # se ele ainda estiver detectando entrada ainda o tamanho que leu quando entrou na pista menos
+   # o seu tamanho, se a possivel saida estiver na frente, usa o dado lateral
+   if valorFrentePercurso > 800:
+       if saidaPossivel != 'frente':
+           robo.straight((valorFrente-tamanhoRobo))
+       else:
+           robo.straight((valorLado-tamanhoRobo))
+   else:
+       robo.straight(valorFrentePercurso) # anda o tamanho do percurso
+  
+   # função para levantar garra
+  
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               robo.straight(-25) #anda um pouco pra trás
+               garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+               robo.straight(-90) #robo vai para trás
+               garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+               garra.reset_angle(0)
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+          
+
+   #vira 90* para esquerda e se ajusta na parede
+   robo.turn(-90)
+   robo.straight(tamanhoRobo) # anda o tamanho do robo
+   valorAndarLado -= tamanhoRobo
+  
+   #vira em direção a parede da frente
+   robo.turn(-90)
+   valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+  
+   #possivél sáida a frente
+   while True:
+       if valorFrentePercurso > 800:
+           robo.turn(90)
+           robo.straight(tamanhoRobo)
+           robo.turn(-90)
+           valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+           if valorFrentePercurso > 800:
+               robo.turn(90)
+               robo.straight(tamanhoRobo)
+               robo.turn(-90)
+               break
+           else:
+               break
+      
+   garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+  
+   #anda o tamanho lido menos o tamanho do robo
+   robo.straight((valorFrentePercurso-tamanhoRobo))
+  
+   #função pegar bolinha
+   while sensortoque.pressed() != True:
+       robo.drive(100,0)
+   #Quando o botão for pressionado, faz a função de levantar a garra
+   limitador = 0 #variavél limitadora
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+          
+   #curva
+   robo.turn(90)
+   robo.straight(tamanhoRobo)#anda o tamanho do robo
+   valorAndarLado -= tamanhoRobo
+   robo.turn(90)
+  
+   valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+  
+   #possivél sáida a frente
+   while True:
+       if valorFrentePercurso > 800:
+           robo.turn(-90)
+           robo.straight(tamanhoRobo)
+           robo.turn(90)
+           valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+           if valorFrentePercurso > 800:
+               robo.turn(-90)
+               robo.straight(tamanhoRobo)
+               robo.turn(90)
+               break
+           else:
+               break 
+  
+   garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+  
+   #anda o tamanho lido menos o tamanho do robo
+   robo.straight((valorFrentePercurso-tamanhoRobo))
+  
+   #função pegar bolinha
+   while sensortoque.pressed() != True:
+       robo.drive(100,0)
+   #Quando o botão for pressionado, faz a função de levantar a garra
+   limitador = 0 #variavél limitadora
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+  
+   robo.turn(-90)
+   rest = ultraSonico.distance() # a distancia dele entre a parede
+  
+  
+  
+  
+  
+   # se rest for maior que o tamanho do robo faz percurso medindo, se não começa a caçar área de resgate
+   if rest > tamanhoRobo:
+      
+       x = rest//tamanhoRobo
+      
+       # x é a quantidade de vezes nescessárias  para chegar no final do trajeto
+      
+       for i in range(1,x):
+           if i%2 == 0:
+               #sobe
+               robo.straight(tamanhoRobo)
+              
+               robo.turn(-90)#vira para cima
+              
+               garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+              
+                #Até que o botão seja pressionado ele seguira em frente
+               while sensortoque.pressed() != True: #
+                   robo.drive(100,0)
+               #Quando o botão for pressionado, faz a função de levantar a garra
+               limitador = 0 #variavél limitadora
+               while True:
+                   if sensortoque.pressed() == True:
+                       robo.straight(-25) #anda um pouco pra trás
+                       garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+                       robo.straight(-90) #robo vai para trás
+                       garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+                       garra.reset_angle(0)
+                       break
+                   else:
+                       if limitador == 2:
+                           break
+                       robo.straight(-30)
+                       robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+                       limitador += 1
+              
+               robo.turn(90)
+              
+           elif i%2 == 1:
+               #desce
+               robo.straight(tamanhoRobo)
+              
+               robo.turn(90)#vira para baixo
+              
+               garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+              
+               while sensortoque.pressed() != True: #
+                   robo.drive(100,0)
+               #Quando o botão for pressionado, faz a função de levantar a garra
+               limitador = 0 #variavél limitadora
+               while True:
+                   if sensortoque.pressed() == True:
+                       robo.straight(-25) #anda um pouco pra trás
+                       garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+                       robo.straight(-90) #robo vai para trás
+                       garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+                       garra.reset_angle(0)
+                       break
+                   else:
+                       if limitador == 2:
+                           break
+                       robo.straight(-30)
+                       robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+                       limitador += 1
+              
+               robo.turn(-90)
+
+       if i%2 == 0:
+           #ficou em cima
+           if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+               while ultraSonico.distance() < 650:
+                   robo.turn(-25)
+               #chama função soltar bolinhas
+               soltarBolinhas()
+           else:
+               robo.turn(90)#vira a direita
+               while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                   if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                       while ultraSonico.distance() < 650:
+                           robo.turn(-25)
+                   #chama função soltar bolinhas
+                   soltarBolinhas()
+                  
+                   robo.drive(100,0)
+                   else:
+                       robo.turn(180)#meia volta
+                       while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                           robo.drive(100,0)
+                       robo.turn(-90)
+                       while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                           robo.drive(100,0)
+                       if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                           while ultraSonico.distance() < 650:
+                               robo.turn(-25)
+                       #chama função soltar bolinhas
+                       soltarBolinhas()
+                      
+       elif i%2 == 1:
+           #ficou em baixo
+          
+           if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+               while ultraSonico.distance() < 650:
+                   robo.turn(-25)
+               #chama função soltar bolinhas
+               soltarBolinhas()
+           else:
+               robo.turn(-90)
+               while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                   robo.drive(100,0)
+               if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                   while ultraSonico.distance() < 650:
+                       robo.turn(-25)
+                   #chama função soltar bolinhas
+                   soltarBolinhas()
+               else:
+                   robo.turn(-90)
+                   while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                       robo.drive(100,0)
+                   if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                       while ultraSonico.distance() < 650:
+                           robo.turn(-25)
+                        #chama função soltar bolinhas
+                       soltarBolinhas()
+      
+   else:
+       while ultraSonico.distance() > 20:
+           robo.drive(100,0)
+           if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+               while ultraSonico.distance() < 650:
+                   robo.turn(-25)
+               #chama função soltar bolinhas
+               soltarBolinhas()
+          
+  
+elif ladoEntrada==2: #direita
+  
+   #alinha á esquerda para ir rente a parede
+   while ultraSonico.distance() < 600:
+       robo.drive(0,25) # Virar para direita
+      
+   #Baixa a garra   
+   garra.run_until_stalled(-200, Stop.HOLD, 50) # abaixar a garra
+  
+   #Até que o botão seja pressionado ele seguira em frente
+   while sensortoque.pressed() != True: #
+       robo.drive(100,0)
+   #Quando o botão for pressionado, faz a função de levantar a garra
+   limitador = 0 #variavél limitadora
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+  
+   #vira 90* para esquerda e se ajusta na parede
+   robo.turn(-90)
+   robo.straight(tamanhoRobo) # anda o tamanho do robo
+   valorAndarLado -= tamanhoRobo
+  
+   #vira em direção a parede da frente
+   robo.turn(-90)
+   valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+  
+   #baixa a garra
+   garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+  
+   #anda na seguna fase da varedura
+   # se ele ainda estiver detectando entrada ainda o tamanho que leu quando entrou na pista menos
+   # o seu tamanho, se a possivel saida estiver na frente, usa o dado lateral
+   if valorFrentePercurso > 800:
+       if saidaPossivel != 'frente':
+           robo.straight((valorFrente-tamanhoRobo))
+       else:
+           robo.straight((valorLado-tamanhoRobo))
+   else:
+       robo.straight(valorFrentePercurso) # anda o tamanho do percurso
+  
+   # função para levantar garra
+  
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               robo.straight(-25) #anda um pouco pra trás
+               garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+               robo.straight(-90) #robo vai para trás
+               garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+               garra.reset_angle(0)
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+          
+
+   #vira 90* para esquerda e se ajusta na parede
+   robo.turn(90)
+   robo.straight(tamanhoRobo) # anda o tamanho do robo
+   valorAndarLado -= tamanhoRobo
+  
+   #vira em direção a parede da frente
+   robo.turn(90)
+   valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+  
+   #possivél sáida a frente
+   while True:
+       if valorFrentePercurso > 800:
+           robo.turn(-90)
+           robo.straight(tamanhoRobo)
+           robo.turn(90)
+           valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+           if valorFrentePercurso > 800:
+               robo.turn(-90)
+               robo.straight(tamanhoRobo)
+               robo.turn(90)
+               break
+           else:
+               break
+      
+   garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+  
+   #anda o tamanho lido menos o tamanho do robo
+   robo.straight((valorFrentePercurso-tamanhoRobo))
+  
+   #função pegar bolinha
+   while sensortoque.pressed() != True:
+       robo.drive(100,0)
+   #Quando o botão for pressionado, faz a função de levantar a garra
+   limitador = 0 #variavél limitadora
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+          
+   #curva
+   robo.turn(-90)
+   robo.straight(tamanhoRobo)#anda o tamanho do robo
+   valorAndarLado -= tamanhoRobo
+   robo.turn(-90)
+  
+   valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+  
+   #possivél sáida a frente
+   while True:
+       if valorFrentePercurso > 800:
+           robo.turn(90)
+           robo.straight(tamanhoRobo)
+           robo.turn(-90)
+           valorFrentePercurso = ultraSonico.distance()# recebe o tamanho do percurso
+           if valorFrentePercurso > 800:
+               robo.turn(90)
+               robo.straight(tamanhoRobo)
+               robo.turn(-90)
+               break
+           else:
+               break 
+  
+   garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+  
+   #anda o tamanho lido menos o tamanho do robo
+   robo.straight((valorFrentePercurso-tamanhoRobo))
+  
+   #função pegar bolinha
+   while sensortoque.pressed() != True:
+       robo.drive(100,0)
+   #Quando o botão for pressionado, faz a função de levantar a garra
+   limitador = 0 #variavél limitadora
+   while True:
+       if sensortoque.pressed() == True:
+           robo.straight(-25) #anda um pouco pra trás
+           garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+           robo.straight(-90) #robo vai para trás
+           garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+           garra.reset_angle(0)
+           break
+       else:
+           if limitador == 2:
+               break
+           robo.straight(-30)
+           robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+           limitador += 1
+  
+   robo.turn(90)
+   rest = ultraSonico.distance() # a distancia dele entre a parede
+  
+  
+  
+  
+  
+   # se rest for maior que o tamanho do robo faz percurso medindo, se não começa a caçar área de resgate
+   if rest > tamanhoRobo:
+      
+       x = rest//tamanhoRobo
+      
+       # x é a quantidade de vezes nescessárias  para chegar no final do trajeto
+      
+       for i in range(1,x):
+           if i%2 == 0:
+               #sobe
+               robo.straight(tamanhoRobo)
+              
+               robo.turn(90)#vira para baixo
+              
+               garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+              
+                #Até que o botão seja pressionado ele seguira em frente
+               while sensortoque.pressed() != True: #
+                   robo.drive(100,0)
+               #Quando o botão for pressionado, faz a função de levantar a garra
+               limitador = 0 #variavél limitadora
+               while True:
+                   if sensortoque.pressed() == True:
+                       robo.straight(-25) #anda um pouco pra trás
+                       garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+                       robo.straight(-90) #robo vai para trás
+                       garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+                       garra.reset_angle(0)
+                       break
+                   else:
+                       if limitador == 2:
+                           break
+                       robo.straight(-30)
+                       robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+                       limitador += 1
+              
+               robo.turn(-90)
+              
+           elif i%2 == 1:
+               #desce
+               robo.straight(tamanhoRobo)
+              
+               robo.turn(-90)#vira para cima
+              
+               garra.run_until_stalled(-50, Stop.HOLD, 50) # abaixa a garra
+              
+               while sensortoque.pressed() != True: #
+                   robo.drive(100,0)
+               #Quando o botão for pressionado, faz a função de levantar a garra
+               limitador = 0 #variavél limitadora
+               while True:
+                   if sensortoque.pressed() == True:
+                       robo.straight(-25) #anda um pouco pra trás
+                       garra.run_angle(30,40,Stop.HOLD, wait=True) #ergue um pouco a garra
+                       robo.straight(-90) #robo vai para trás
+                       garra.run_until_stalled(10000, Stop.HOLD, 100) # ergue tudo a garra (posição inicial)
+                       garra.reset_angle(0)
+                       break
+                   else:
+                       if limitador == 2:
+                           break
+                       robo.straight(-30)
+                       robo.straight(retentativaBotao)# se andar de mais para frente diminuir
+                       limitador += 1
+              
+               robo.turn(90)
+
+       if i%2 == 0:
+           #ficou em cima
+           if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+               while ultraSonico.distance() < 650:
+                   robo.turn(25)
+               #chama função soltar bolinhas
+               soltarBolinhas()
+           else:
+               robo.turn(-90)#vira a esquerda
+               while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                   if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                       while ultraSonico.distance() < 650:
+                           robo.turn(25)
+                   #chama função soltar bolinhas
+                   soltarBolinhas()
+                  
+                   robo.drive(100,0)
+                   else:
+                       robo.turn(-180)#meia volta
+                       while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                           robo.drive(100,0)
+                       robo.turn(90)
+                       while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                           robo.drive(100,0)
+                       if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                           while ultraSonico.distance() < 650:
+                               robo.turn(25)
+                       #chama função soltar bolinhas
+                       soltarBolinhas()
+                      
+       elif i%2 == 1:
+           #ficou em baixo
+          
+           if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+               while ultraSonico.distance() < 650:
+                   robo.turn(25)
+               #chama função soltar bolinhas
+               soltarBolinhas()
+           else:
+               robo.turn(90)
+               while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                   robo.drive(100,0)
+               if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                   while ultraSonico.distance() < 650:
+                       robo.turn(25)
+                   #chama função soltar bolinhas
+                   soltarBolinhas()
+               else:
+                   robo.turn(90)
+                   while sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK or ultraSonico.distance() < 50 or sensortoque.pressed() == True:
+                       robo.drive(100,0)
+                   if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+                       while ultraSonico.distance() < 650:
+                           robo.turn(25)
+                        #chama função soltar bolinhas
+                       soltarBolinhas()
+      
+   else:
+       while ultraSonico.distance() > 20:
+           robo.drive(100,0)
+           if sensorCorEsquerda.color() == Color.BLACK or sensorCorDireita.color() == Color.BLACK:
+               while ultraSonico.distance() < 650:
+                   robo.turn(25)
+               #chama função soltar bolinhas
+               soltarBolinhas()
+  
+#-------------------------------------------------
+#---ALGOTIMO FIM---
+
+
