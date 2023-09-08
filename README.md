@@ -1,3 +1,2 @@
 # OBR-pratica
-This repository stores all the pybrick codes that i used/tested, to compete in the OBR (Brazilian Robotics Olympiad)
-I won the 2022 OBR in Rondônia, and got to the national stage, and also competed in 2023, but my focus shifted to web development, so unfortunaly i didn't won
+This repository contains all the PyBrick code I used and tested for competing in the Brazilian Robotics Olympiad (OBR). I achieved victory in the 2022 OBR regional competition in Rondônia, advancing to the national stage. In 2023, although I competed again, my focus had shifted towards web development, and unfortunately, I did not secure another victory.
